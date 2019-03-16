@@ -263,6 +263,12 @@ FakesAssemblies/
 .ntvs_analysis.dat
 node_modules/
 
+#PowerShell Solutions
+**/ps_modules/
+**/ps_scripts/
+ps-solution-lock.json
+
+
 # Visual Studio 6 build log
 *.plg
 
