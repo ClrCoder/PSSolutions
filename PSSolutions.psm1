@@ -252,8 +252,8 @@ function Import-PSSolution {
     
     # Normalizing dependencies specs
     $depModules = $depModules | `
-        group {$_.Name + [char]0x0 + $_.MinimumVersion} | `
-        sort -Property Name | `
+        Group-Object {$_.Name + [char]0x0 + $_.MinimumVersion} | `
+        Sort-Object -Property Name | `
         % {[PSCustomObject]@{
             Name           = $_.Group[0].Name 
             MinimumVersion = $_.Group[0].MinimumVersion
