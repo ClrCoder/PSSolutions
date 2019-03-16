@@ -61,7 +61,6 @@ $OnRemoveScript = {
 $ExecutionContext.SessionState.Module.OnRemove += $OnRemoveScript
 
 function Get-PSSolutionModule {
-    [outputtype([array])]
     param(
         [Parameter(Position = 0, Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
@@ -69,6 +68,7 @@ function Get-PSSolutionModule {
         [Parameter(Mandatory = $false)]
         [switch] $SkipLoadData
     )
+    
     foreach ($dir in Get-ChildItem -LiteralPath $Path -Directory | ? `
         {$_.Name -ne $PSModulesFolderName -and $_.Name -ne $PSScriptsFolderName}) {
         $moduleDataPath = Join-Path $dir.FullName "$($dir.Name).psd1"
@@ -88,7 +88,6 @@ function Get-PSSolutionModule {
 }
 
 function Get-PSSolution {
-    [outputtype([array])]
     param()
     $ImportedPSSolutions.keys | % {[PSCustomObject]@{
             Name = $_
@@ -120,7 +119,7 @@ function Get-SolutionModulesState {
         $SolutionModules
     )
 
-    return $solutionModules `
+    $SolutionModules `
         | % {
         [PSCustomObject]@{ 
             Name  = $_.Name; 
@@ -172,7 +171,8 @@ function Import-PSSolution {
     )
 
     # Normalizing solution path
-    $solutionPath = [IO.Path]::GetFullPath($Path)
+    $solutionPath = [IO.Path]::GetFullPath([IO.Path]::Combine((Get-Location).Path, $Path))
+    Write-Verbose "PSSolution directory: '$solutionPath'"
 
     # Checking solution path exists
     if (!(Test-Path $solutionPath -PathType Container)) {
@@ -187,8 +187,6 @@ function Import-PSSolution {
 
     $oldSolution = $ImportedPSSolutions[$Name]
     
-    [array]$solutionModules = $null
-
     $lockData = Get-LockData -Path $solutionPath
 
     # Performing checks for already imported solution
@@ -209,8 +207,8 @@ function Import-PSSolution {
 
         $solutionModules = Get-PSSolutionModule -Path $solutionPath -SkipLoadData
 
-        [array]$currentState = Get-SolutionModulesState $solutionModules
-        [array]$oldState = $lockData.moduleState
+        $currentState = Get-SolutionModulesState @($solutionModules)
+        $oldState = $lockData.moduleState
        
         # Comparing module states
         $stateAreEqual = $false
@@ -231,14 +229,15 @@ function Import-PSSolution {
     }
 
     # Loading solution modules with their data
-    [array]$solutionModules = Get-PSSolutionModule -Path $solutionPath
+    $solutionModules = Get-PSSolutionModule -Path $solutionPath
     
     # Populating modules dictionary
     $solutionModulesDictionary = @{}
+
     $solutionModules | % {$solutionModulesDictionary.Add($_.Name, $_)}
     
     # Generating dependencies spec of the solution
-    [array]$depModules = @()
+    $depModules = @()
     foreach ($module in $solutionModules) {
         foreach ($moduleDep in $module.Data.RequiredModules) {
             if (!$solutionModulesDictionary.ContainsKey($moduleDep.ModuleName)) {
@@ -260,7 +259,7 @@ function Import-PSSolution {
         }}
 
     $depModulesNotChanged = $false
-    [array]$oldDepModules = $lockData.DependencyModules
+    $oldDepModules = $lockData.DependencyModules
 
     if ($oldDepModules.Count -eq $depModules.Count) {
         for ($i = 0; $i -lt $oldDepModules.Count; $i++) {
@@ -279,10 +278,11 @@ function Import-PSSolution {
     # Updating dependency modules
     if ($depModulesNotChanged) {
         Write-Verbose "Dependency modules has not been changed."
-        if ($oldSolution){
+        if ($oldSolution) {
             return;
         }
-    }else{
+    }
+    else {
         if ($oldSolution) {
             Write-Verbose "Dependency modules changed, unloading PSSolution"
             Remove-PSSolution -Name $Name -Verbose:$Verbose
@@ -306,8 +306,8 @@ function Import-PSSolution {
     
     
     ConvertTo-Json @{
-        DependencyModules = $depModules
-        ModuleState       = Get-SolutionModulesState $solutionModules
+        DependencyModules = @($depModules)
+        ModuleState       = @(Get-SolutionModulesState @($solutionModules))
     } | Out-File -Encoding utf8 -FilePath (Join-Path $solutionPath $PSSolutionLockFileName)
 
     $solution = [PSSolution]@{
