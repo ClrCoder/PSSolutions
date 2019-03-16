@@ -126,7 +126,7 @@ function Get-SolutionModulesState {
             Name  = $_.Name; 
             State = [string]$_.LastWriteTime.Ticks
         }} `
-        | sort Name
+        | Sort-Object Name
 }
 
 function Save-ModuleFast {
