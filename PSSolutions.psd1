@@ -4,7 +4,7 @@
     RootModule        = 'PSSolutions.psm1'
 
     # Version number of this module.
-    ModuleVersion     = '0.0.2'
+    ModuleVersion     = '0.0.3'
 
     # ID used to uniquely identify this module
     GUID              = '642DC5CF-400A-41E4-80AE-81F57CDF3857'
