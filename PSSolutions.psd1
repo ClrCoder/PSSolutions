@@ -23,6 +23,7 @@
 
     # Functions to export from this module
     FunctionsToExport = @(
+        'Get-PSSolution',
         'Import-PSSolution',
         'Remove-PSSolution'
     )
